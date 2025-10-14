@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Spectrum - Political Ideology Platform</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Zilla+Slab:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="dark-theme">
+
+    <div class="ad-banner top-ad"><!-- Your Top Ad Code Goes Here --></div>
+
+    <nav>
+        <div class="nav-brand"><a href="#home">The Spectrum</a></div>
+        <div class="nav-links">
+            <a href="#home" class="nav-link" data-page="home">Home</a>
+            <a href="#quiz" class="nav-link" data-page="quiz">Full Quiz</a>
+            <a href="#community" class="nav-link" data-page="community">Community</a>
+        </div>
+        <div id="auth-links">
+            <a href="#" id="login-btn">Login</a>
+            <a href="#" id="register-btn">Register</a>
+        </div>
+        <div id="user-session" class="hidden">
+            <a href="#profile" class="nav-link" data-page="profile" id="profile-link">Profile</a>
+            <a href="#" id="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- All page content is dynamically injected here by script.js -->
+        <div class="spinner-container"><div class="spinner"></div></div>
+    </main>
+
+    <div class="ad-banner side-ad"><!-- Your Side Ad Code Goes Here --></div>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="hidden"></div>
+    <div id="login-modal" class="modal hidden">
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-pass" placeholder="Password" required>
+            <a href="#" id="forgot-password-link">Forgot Password?</a>
+            <button type="submit">Log In</button>
+            <p class="error-msg" id="login-error"></p>
+        </form>
+    </div>
+    <div id="register-modal" class="modal hidden">
+        <h2>Register</h2>
+        <form id="register-form">
+            <input type="email" id="register-email" placeholder="Email" required>
+            <input type="text" id="register-user" placeholder="Username (min. 3 characters)" required>
+            <input type="password" id="register-pass" placeholder="Password (min. 6 characters)" required>
+            <button type="submit">Create Account</button>
+            <p class="error-msg" id="register-error"></p>
+        </form>
+    </div>
+    <div id="forgot-password-modal" class="modal hidden">
+        <h2>Reset Password</h2>
+        <form id="forgot-password-form">
+            <p>Enter your email to receive a password reset link.</p>
+            <input type="email" id="forgot-email" placeholder="Your Email" required>
+            <button type="submit">Send Reset Link</button>
+            <p class="success-msg hidden" id="forgot-success"></p>
+        </form>
+    </div>
+    <div id="change-password-modal" class="modal hidden">
+        <h2>Create a New Password</h2>
+        <form id="change-password-form">
+            <input type="password" id="change-pass" placeholder="New Password (min. 6 characters)" required>
+            <button type="submit">Update Password</button>
+            <p class="error-msg" id="change-password-error"></p>
+        </form>
+    </div>
+    <div id="captcha-modal" class="modal hidden">
+        <h2>Are you paying attention?</h2>
+        <p>To prevent spam, please type the code below to continue.</p>
+        <div id="captcha-code"></div>
+        <input type="text" id="captcha-input" placeholder="Enter code here" autocomplete="off">
+        <button id="captcha-submit">Continue Quiz</button>
+        <p class="error-msg" id="captcha-error"></p>
+    </div>
+
+    <!-- Notification / Toast Container -->
+    <div id="toast-container"></div>
+
+    <footer>
+        <p>Developed by Gemini. Inspired by 8values. | <a href="#settings" class="nav-link" data-page="settings">Settings</a></p>
+        <p><strong>Disclaimer:</strong> This is an experimental, work-in-progress tool. Results are for entertainment and may not be 100% correct.</p>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
