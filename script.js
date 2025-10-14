@@ -1,3 +1,9 @@
+// This function is defined outside the main event listener to ensure it's always available for inline HTML onclick events.
+function navigate(page, context) {
+    const newHash = page === 'home' ? '' : (context ? `${page}/${context}` : page);
+    window.location.hash = newHash;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===================================================================================
@@ -45,18 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================================================================================
     function attachEventListeners() {
         document.body.addEventListener('click', e => {
-            const navLink = e.target.closest('a[href^="#"]');
-            if (navLink) {
-                e.preventDefault();
-                navigate(navLink.hash.substring(1));
-                return;
-            }
             const pageLink = e.target.closest('[data-page]');
             if (pageLink) {
                 e.preventDefault();
                 navigate(pageLink.dataset.page);
             }
         });
+
+        document.querySelector('nav .nav-brand a').addEventListener('click', e => { e.preventDefault(); navigate('home'); });
+        document.querySelectorAll('nav .nav-links a').forEach(el => el.addEventListener('click', e => { e.preventDefault(); navigate(el.hash.substring(1)); }));
+        document.querySelector('footer a').addEventListener('click', e => { e.preventDefault(); navigate('settings'); });
+
         document.getElementById('logout-btn').addEventListener('click', logout);
         document.getElementById('login-btn').addEventListener('click', () => showModal('login-modal'));
         document.getElementById('register-btn').addEventListener('click', () => showModal('register-modal'));
@@ -112,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadSettingsPage() { const settings = getSettings(); document.getElementById('theme-toggle').checked = settings.theme === 'dark'; document.getElementById('ads-toggle').checked = settings.adsEnabled; document.getElementById('theme-toggle').addEventListener('change', handleThemeToggle); document.getElementById('ads-toggle').addEventListener('change', handleAdsToggle); const customizationDiv = document.getElementById('profile-customization'); if (currentUser) { customizationDiv.classList.remove('hidden'); const level = calculateLevel(localUserProfile.xp); const colorPicker = document.getElementById('banner-color-picker'); colorPicker.value = localUserProfile.banner_color || '#3b3b47'; colorPicker.disabled = level < 5; const gifInput = document.getElementById('profile-gif-input'); gifInput.value = localUserProfile.profile_gif_url || ''; gifInput.disabled = level < 20; document.getElementById('save-customization-btn').addEventListener('click', saveProfileCustomizations); document.getElementById('change-password-btn').addEventListener('click', () => showModal('change-password-modal')); document.getElementById('change-password-form').addEventListener('submit', handleChangePassword); } else { customizationDiv.classList.add('hidden'); document.getElementById('account-actions').classList.add('hidden');} }
     async function loadForums() { const threadsContainer = document.getElementById('forum-threads'); const threads = [ { id: 1, title: 'Debate: Universal Basic Income' }]; threadsContainer.innerHTML = threads.map(t => ` <div class="forum-thread" id="thread-${t.id}"> <div class="thread-header"><h4>${t.title}</h4></div> <div class="thread-posts"></div> <div class="reply-area"> <textarea placeholder="Write a reply..."></textarea> <button data-thread-id="${t.id}">Post Reply</button> </div> </div>`).join(''); threads.forEach(t => { const posts = JSON.parse(localStorage.getItem(`forum_thread_${t.id}`)) || [{author: 'Admin', content: 'Be the first to post!'}]; const postsContainer = document.querySelector(`#thread-${t.id} .thread-posts`); postsContainer.innerHTML = posts.map(p => `<div class="post"><span class="post-author">${p.author}:</span><span class="post-content">${p.content}</span></div>`).join(''); }); document.getElementById('forum-threads').addEventListener('click', e => { if (e.target.tagName === 'BUTTON' && e.target.dataset.threadId) { const content = e.target.previousElementSibling.value; if (!content.trim()) return; handlePostReply(e.target.dataset.threadId, content); e.target.previousElementSibling.value = ''; } });}
     async function loadCommunityPage() { const userList = document.getElementById('user-list'); userList.innerHTML = `<div class="spinner-container"><div class="spinner"></div></div>`; const { data, error } = await db.from('profiles').select('id, username, xp').order('xp', { ascending: false }).limit(20); if (error) { userList.innerHTML = `<p class="error-msg">Could not load users.</p>`; return; } userList.innerHTML = data.map(user => `<div class="user-card" onclick="navigate('profile', '${user.id}')"><span class="user-card-info">${user.username} (Lvl ${calculateLevel(user.xp)})</span><span>View Profile</span></div>`).join(''); document.getElementById('user-search').addEventListener('input', async (e) => { const searchTerm = e.target.value; if (searchTerm.length < 2) return; const { data } = await db.from('profiles').select('id, username, xp').ilike('username', `%${searchTerm}%`); userList.innerHTML = data.map(user => `<div class="user-card" onclick="navigate('profile', '${user.id}')"><span class="user-card-info">${user.username} (Lvl ${calculateLevel(user.xp)})</span><span>View Profile</span></div>`).join(''); }); }
-    async function loadActivityFeed() { const feedContent = document.getElementById('feed-content'); const { data, error } = await db.from('quiz_results').select(`user_id, ideology_name, profiles(username)`).order('created_at', { ascending: false }).limit(5); if (error || !data || !data.length) { feedContent.innerHTML = `<div class="empty-state"><p>No recent activity. Be the first to take the quiz!</p></div>`; return; } feedContent.innerHTML = data.map(item => `<div class="post"><a href="#profile/${item.user_id}" class="nav-link post-author">${item.profiles.username}</a> completed the quiz and is a ${item.ideology_name}.</div>`).join(''); }
+    async function loadActivityFeed() { const feedContent = document.getElementById('feed-content'); const { data, error } = await db.from('quiz_results').select(`user_id, ideology_name, profiles(username)`).order('created_at', { ascending: false }).limit(5); if (error || !data || !data.length) { feedContent.innerHTML = `<div class="empty-state"><p>No recent activity. Be the first to take the quiz!</p></div>`; return; } feedContent.innerHTML = data.map(item => `<div class="post"><a href="#profile/${item.user_id}" class="post-author">${item.profiles.username}</a> completed the quiz and is a ${item.ideology_name}.</div>`).join(''); }
 
     // --- QUIZ LOGIC ---
     function startQuiz(type) { quizState = { lastAnswers: [], promptTimerId: null, type, currentQuestionIndex: 0, scores: { econ: 0, dipl: 0, govt: 0, scty: 0 }, maxScores: { econ: 0, dipl: 0, govt: 0, scty: 0 } }; const quizContainer = mainContainer.querySelector('.page.active'); if (type === 'daily') { const today = new Date().toISOString().slice(0, 10); if (currentUser && localUserProfile.last_daily_completion === today) { quizContainer.innerHTML = `<h1>Daily Quiz</h1><p>You've already completed the quiz for today! Come back tomorrow.</p>`; return; } const questionIndex = new Date().getDate() % DAILY_QUESTIONS.length; quizState.questions = [DAILY_QUESTIONS[questionIndex]]; quizState.xpReward = 10 + (currentUser ? localUserProfile.daily_streak * 2 : 0); } else { quizState.questions = questions; quizState.xpReward = 100; } quizState.questions.forEach(q => { for (const axis in q.effect) { quizState.maxScores[axis] += Math.abs(q.effect[axis]); } }); attachQuizListeners(); loadQuestion(); }
@@ -125,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION & PROFILE HANDLERS ---
     async function handleAuthChange(session) { if (session) { currentUser = session.user; localUserProfile = await fetchUserProfile(currentUser.id); if (!localUserProfile && currentUser.user_metadata.username) { const { data, error } = await db.from('profiles').insert({ id: currentUser.id, username: currentUser.user_metadata.username }).select().single(); if (error) console.error("Error creating profile:", error); else localUserProfile = data; } } else { currentUser = null; localUserProfile = null; } updateAuthState(); }
-    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) document.getElementById('login-error').textContent = error.message; }
+    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) { document.getElementById('login-error').textContent = error.message; } else { hideModals(); } }
     async function handleRegister(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('register-email').value; const user = document.getElementById('register-user').value; const pass = document.getElementById('register-pass').value; if (pass.length < 6) { document.getElementById('register-error').textContent = 'Password must be at least 6 characters.'; hideButtonSpinner(btn, 'Create Account'); return; } const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { username: user } } }); hideButtonSpinner(btn, 'Create Account'); if (error) { document.getElementById('register-error').textContent = error.message; } else { hideModals(); showToast("Registration successful! Please check your email to confirm your account.", "success"); } }
     async function logout() { await db.auth.signOut(); }
     function handleForgotPasswordLink(e) { e.preventDefault(); hideModals(); showModal('forgot-password-modal'); }
@@ -147,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateDailyStreak() { const today = new Date().toISOString().slice(0, 10); const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yesterdayStr = yesterday.toISOString().slice(0, 10); let newStreak = 1; if (localUserProfile.last_daily_completion === yesterdayStr) { newStreak = localUserProfile.daily_streak + 1; } const { data } = await db.from('profiles').update({ daily_streak: newStreak, last_daily_completion: today }).eq('id', currentUser.id).select().single(); if (data) localUserProfile = data; }
 
     // --- UTILITY FUNCTIONS ---
-    function navigate(page, context) { const newHash = page === 'home' ? '' : (context ? `${page}/${context}` : page); window.location.hash = newHash; }
     function showToast(message, type = 'success') { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.textContent = message; container.appendChild(toast); setTimeout(() => toast.remove(), 5000); }
     function showButtonSpinner(button) { button.disabled = true; button.innerHTML = `<div class="spinner button-spinner"></div>`; }
     function hideButtonSpinner(button, text) { button.disabled = false; button.innerHTML = text; }
