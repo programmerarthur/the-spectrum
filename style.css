@@ -69,8 +69,8 @@ textarea:focus, input:focus { border-color: var(--accent-color); box-shadow: 0 0
 .badge { width: 80px; height: 80px; background-color: var(--primary-bg); border: 2px solid var(--border-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
 .badge.earned { border-color: var(--accent-color); } .badge.unearned { filter: grayscale(1); opacity: 0.5; }
 
-body:not(.ads-enabled) .ad-banner { display: none; }
-.ad-banner { background-color: var(--secondary-bg); border: 1px dashed var(--border-color); text-align: center; color: var(--text-muted); font-size: 0.8rem; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
+body:not(.ads-enabled) .ad-banner { opacity: 0; pointer-events: none; }
+.ad-banner { background-color: var(--secondary-bg); border: 1px dashed var(--border-color); text-align: center; color: var(--text-muted); font-size: 0.8rem; box-sizing: border-box; display: flex; justify-content: center; align-items: center; transition: opacity 0.3s; }
 .top-ad { position: fixed; top: 0; width: 100%; height: 40px; z-index: 1001; }
 .side-ad { display: none; }
 @media (min-width: 1200px) { .side-ad { display: flex; position: fixed; right: 20px; top: 120px; width: 160px; height: 600px; } }
