@@ -1,9 +1,3 @@
-// This function is defined outside the main event listener to ensure it's always available.
-function navigate(page, context) {
-    const newHash = page === 'home' ? '' : (context ? `${page}/${context}` : page);
-    window.location.hash = newHash;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===================================================================================
@@ -130,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION & PROFILE HANDLERS ---
     async function handleAuthChange(session) { if (session) { currentUser = session.user; localUserProfile = await fetchUserProfile(currentUser.id); if (!localUserProfile && currentUser.user_metadata.username) { const { data, error } = await db.from('profiles').insert({ id: currentUser.id, username: currentUser.user_metadata.username }).select().single(); if (error) console.error("Error creating profile:", error); else localUserProfile = data; } } else { currentUser = null; localUserProfile = null; } updateAuthState(); }
-    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) document.getElementById('login-error').textContent = error.message; }
+    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) { document.getElementById('login-error').textContent = error.message; } else { hideModals(); } }
     async function handleRegister(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('register-email').value; const user = document.getElementById('register-user').value; const pass = document.getElementById('register-pass').value; if (pass.length < 6) { document.getElementById('register-error').textContent = 'Password must be at least 6 characters.'; hideButtonSpinner(btn, 'Create Account'); return; } const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { username: user } } }); hideButtonSpinner(btn, 'Create Account'); if (error) { document.getElementById('register-error').textContent = error.message; } else { hideModals(); showToast("Registration successful! Please check your email to confirm your account.", "success"); } }
     async function logout() { await db.auth.signOut(); }
     function handleForgotPasswordLink(e) { e.preventDefault(); hideModals(); showModal('forgot-password-modal'); }
