@@ -1,4 +1,4 @@
-// This function is defined globally to be accessible for inline HTML onclick events.
+// This function must be defined globally to be accessible for inline HTML onclick events.
 function navigate(page, context) {
     const newHash = context ? `${page}/${context}` : page;
     window.location.hash = newHash;
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ===================================================================================
-    // --- STATE MANAGEMENT & DOM ELEMENTS ---
+    // --- STATE MANAGEMENT ---
     // ===================================================================================
     let currentUser = null;
     let localUserProfile = null;
@@ -125,9 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION & PROFILE HANDLERS ---
     async function handleAuthChange(session) { if (session) { currentUser = session.user; localUserProfile = await fetchUserProfile(currentUser.id); if (!localUserProfile && currentUser.user_metadata.username) { const { data, error } = await db.from('profiles').insert({ id: currentUser.id, username: currentUser.user_metadata.username }).select().single(); if (error) console.error("Error creating profile:", error); else localUserProfile = data; } } else { currentUser = null; localUserProfile = null; } updateAuthState(); }
-    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) { document.getElementById('login-error').textContent = error.message; } else { hideModals(); navigate('home'); } }
+    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) document.getElementById('login-error').textContent = error.message; }
     async function handleRegister(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('register-email').value; const user = document.getElementById('register-user').value; const pass = document.getElementById('register-pass').value; if (pass.length < 6) { document.getElementById('register-error').textContent = 'Password must be at least 6 characters.'; hideButtonSpinner(btn, 'Create Account'); return; } const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { username: user } } }); hideButtonSpinner(btn, 'Create Account'); if (error) { document.getElementById('register-error').textContent = error.message; } else { hideModals(); showToast("Registration successful! Please check your email to confirm your account.", "success"); } }
-    async function logout() { await db.auth.signOut(); navigate('home'); }
+    async function logout() { await db.auth.signOut(); }
     function handleForgotPasswordLink(e) { e.preventDefault(); hideModals(); showModal('forgot-password-modal'); }
     async function handleForgotPasswordSubmit(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('forgot-email').value; const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); const successMsg = document.getElementById('forgot-success'); successMsg.classList.remove('hidden'); successMsg.textContent = "If an account with that email exists, a reset link has been sent."; if (error) console.log("Reset Error (not shown to user):", error); hideButtonSpinner(btn, 'Send Reset Link'); }
     async function handleChangePassword(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const pass = document.getElementById('change-pass').value; if (pass.length < 6) { document.getElementById('change-password-error').textContent = 'Password must be at least 6 characters.'; hideButtonSpinner(btn, 'Update Password'); return; } const { error } = await db.auth.updateUser({ password: pass }); hideButtonSpinner(btn, 'Update Password'); if (error) { document.getElementById('change-password-error').textContent = error.message; } else { showToast("Password updated successfully!", "success"); hideModals(); } }
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHistoryChart(canvas, results) { if (!canvas) return; const ctx = canvas.getContext('2d'); if (chartInstances.historyChart) chartInstances.historyChart.destroy(); const isDarkTheme = getSettings().theme === 'dark'; const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'; const labelColor = isDarkTheme ? '#e0e0e0' : '#333'; const labels = results.map(r => new Date(r.created_at).toLocaleDateString()).reverse(); const datasets = [ { label: 'Economic', data: results.map(r => r.econ_score).reverse(), borderColor: 'var(--disagree-strong)', tension: 0.1, fill: false }, { label: 'Diplomatic', data: results.map(r => r.dipl_score).reverse(), borderColor: '#f0ad4e', tension: 0.1, fill: false }, { label: 'Civil', data: results.map(r => r.govt_score).reverse(), borderColor: 'var(--agree-strong)', tension: 0.1, fill: false }, { label: 'Societal', data: results.map(r => r.scty_score).reverse(), borderColor: '#5bc0de', tension: 0.1, fill: false } ]; chartInstances.historyChart = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { scales: { y: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: labelColor } }, x: { grid: { color: gridColor }, ticks: { color: labelColor } } }, plugins: { legend: { labels: { color: labelColor } } } } }); }
 
     // ===================================================================================
-    // --- INITIALIZATION ---
+    // --- INITIALIZATION & SESSION HANDLING ---
     // ===================================================================================
     async function init() {
         attachEventListeners();
@@ -196,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
         handleRouteChange();
         window.addEventListener('hashchange', handleRouteChange);
     }
-    
-    // This is the line that starts everything. It's now at the very end of the main listener.
+
     init();
 });
