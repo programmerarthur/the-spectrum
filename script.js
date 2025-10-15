@@ -47,29 +47,54 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===================================================================================
-    // --- ROUTING & PAGE RENDERING ---
+    // --- EVENT LISTENERS & ROUTING ---
     // ===================================================================================
+    function attachEventListeners() {
+        document.body.addEventListener('click', e => {
+            const pageLink = e.target.closest('[data-page]');
+            if (pageLink) {
+                e.preventDefault();
+                navigate(pageLink.dataset.page);
+            }
+        });
+
+        document.querySelector('nav .nav-brand a').addEventListener('click', e => { e.preventDefault(); navigate('home'); });
+        document.querySelectorAll('nav .nav-links a').forEach(el => el.addEventListener('click', e => { e.preventDefault(); navigate(el.hash.substring(1)); }));
+        document.querySelector('footer a').addEventListener('click', e => { e.preventDefault(); navigate('settings'); });
+
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        document.getElementById('login-btn').addEventListener('click', () => showModal('login-modal'));
+        document.getElementById('register-btn').addEventListener('click', () => showModal('register-modal'));
+        document.getElementById('modal-backdrop').addEventListener('click', hideModals);
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+        document.getElementById('captcha-submit').addEventListener('click', verifyCaptcha);
+        document.getElementById('forgot-password-link').addEventListener('click', handleForgotPasswordLink);
+        document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPasswordSubmit);
+    }
+    
     function handleRouteChange() {
         const hash = window.location.hash || '#home';
         const [page, context] = hash.substring(1).split('/');
         renderPage(page, context);
     }
 
+    // ===================================================================================
+    // --- PAGE & MODAL RENDERING ---
+    // ===================================================================================
     async function renderPage(pageId, context = null) {
         if (!pageId || !templates[pageId]) pageId = 'home';
         
         mainContainer.innerHTML = templates[pageId]();
         
         try {
-            switch(pageId) {
-                case 'home': await loadHomePage(); break;
-                case 'quiz': startQuiz('full'); break;
-                case 'daily-quiz': startQuiz('daily'); break;
-                case 'profile': await loadProfilePage(context); break;
-                case 'forums': await loadForums(); break;
-                case 'settings': loadSettingsPage(); break;
-                case 'community': await loadCommunityPage(); break;
-            }
+            if (pageId === 'home') await loadHomePage();
+            else if (pageId === 'quiz') startQuiz('full');
+            else if (pageId === 'daily-quiz') startQuiz('daily');
+            else if (pageId === 'profile') await loadProfilePage(context);
+            else if (pageId === 'forums') await loadForums();
+            else if (pageId === 'settings') loadSettingsPage();
+            else if (pageId === 'community') await loadCommunityPage();
         } catch (error) {
             console.error("Error rendering page:", error);
             showToast("Failed to load page content.", "error");
@@ -77,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateAuthState();
     }
+    
+    function showModal(modalId) { document.getElementById('modal-backdrop').classList.remove('hidden'); document.getElementById(modalId).classList.remove('hidden'); }
+    function hideModals() { document.getElementById('modal-backdrop').classList.add('hidden'); document.querySelectorAll('.modal').forEach(m => { m.classList.add('hidden'); const errorMsg = m.querySelector('.error-msg'); if(errorMsg) errorMsg.textContent = ''; }); }
     
     // --- PAGE-SPECIFIC LOADERS ---
     async function loadHomePage() { if (currentUser && localUserProfile) { const streakEl = document.getElementById('daily-streak'); streakEl.textContent = localUserProfile.daily_streak > 0 ? `🔥 ${localUserProfile.daily_streak}` : ''; document.getElementById('daily-quiz-prompt').classList.remove('hidden'); } await loadActivityFeed(); }
@@ -97,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION & PROFILE HANDLERS ---
     async function handleAuthChange(session) { if (session) { currentUser = session.user; localUserProfile = await fetchUserProfile(currentUser.id); if (!localUserProfile && currentUser.user_metadata.username) { const { data, error } = await db.from('profiles').insert({ id: currentUser.id, username: currentUser.user_metadata.username }).select().single(); if (error) console.error("Error creating profile:", error); else localUserProfile = data; } } else { currentUser = null; localUserProfile = null; } updateAuthState(); }
-    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) document.getElementById('login-error').textContent = error.message; else hideModals(); }
+    async function handleLogin(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('login-email').value; const pass = document.getElementById('login-pass').value; const { error } = await db.auth.signInWithPassword({ email, password: pass }); hideButtonSpinner(btn, 'Log In'); if (error) { document.getElementById('login-error').textContent = error.message; } else { hideModals(); navigate('home'); } }
     async function handleRegister(e) { e.preventDefault(); const btn = e.target.querySelector('button'); showButtonSpinner(btn); const email = document.getElementById('register-email').value; const user = document.getElementById('register-user').value; const pass = document.getElementById('register-pass').value; if (pass.length < 6) { document.getElementById('register-error').textContent = 'Password must be at least 6 characters.'; hideButtonSpinner(btn, 'Create Account'); return; } const { data, error } = await db.auth.signUp({ email, password: pass, options: { data: { username: user } } }); hideButtonSpinner(btn, 'Create Account'); if (error) { document.getElementById('register-error').textContent = error.message; } else { hideModals(); showToast("Registration successful! Please check your email to confirm your account.", "success"); } }
     async function logout() { await db.auth.signOut(); navigate('home'); }
     function handleForgotPasswordLink(e) { e.preventDefault(); hideModals(); showModal('forgot-password-modal'); }
@@ -153,8 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (event === "PASSWORD_RECOVERY") {
                 showModal('change-password-modal');
-            } else if (event === "SIGNED_IN" && previousUser !== session.user.id) {
-                // If a new user signs in, navigate to home.
+            } else if (event === "SIGNED_IN" && previousUser !== session?.user?.id) {
+                // Only navigate if it's a new sign-in
                 navigate('home');
             } else if (event === "SIGNED_OUT") {
                 navigate('home');
@@ -168,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         handleRouteChange();
         window.addEventListener('hashchange', handleRouteChange);
     }
-
-    // This is the line that starts everything.
+    
+    // This is the line that starts everything. It's now at the very end of the main listener.
     init();
 });
