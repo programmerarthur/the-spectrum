@@ -1,6 +1,6 @@
 :root { --font-sans: 'Inter', sans-serif; --font-serif: 'Zilla Slab', serif; }
 .light-theme { --primary-bg: #f8f9fa; --secondary-bg: #ffffff; --text-color: #212529; --text-muted: #6c757d; --border-color: #dee2e6; --accent-color: #0d6efd; --accent-hover: #0b5ed7; --shadow-color: rgba(0, 0, 0, 0.075); --agree-strong: #198754; --agree-light: #1f9d63; --disagree-strong: #dc3545; --disagree-light: #e4606d; --neutral-color: #6c757d; --success-color: #198754; --error-color: #dc3545; }
-.dark-theme { --primary-bg: #121212; --secondary-bg: #1e1e1e; --text-color: #e9ecef; --text-muted: #adb5bd; --border-color: #495057; --accent-color: #0d6efd; --accent-hover: #3b82f6; --shadow-color: rgba(0, 0, 0, 0.2); --agree-strong: #198754; --agree-light: #20c997; --disagree-strong: #dc3545; --disagree-light: #fd7e14; --neutral-color: #6c757d; --success-color: #198754; --error-color: #dc3545; }
+.dark-theme { --primary-bg: #121212; --secondary-bg: #1e1e1e; --text-color: #e9ecef; --text-muted: #adb5bd; --border-color: #495057; --accent-color: #0d6efd; --accent-hover: #3b82f6; --shadow-color: rgba(0, 0, 0, 0.2); --agree-strong: #28a745; --agree-light: #20c997; --disagree-strong: #dc3545; --disagree-light: #fd7e14; --neutral-color: #6c757d; --success-color: #198754; --error-color: #dc3545; }
 
 *, *::before, *::after { box-sizing: border-box; }
 body { font-family: var(--font-sans); background-color: var(--primary-bg); color: var(--text-color); margin: 0; padding: 120px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; transition: background-color 0.3s, color 0.3s; }
@@ -71,7 +71,7 @@ textarea:focus, input:focus { border-color: var(--accent-color); box-shadow: 0 0
 
 body:not(.ads-enabled) .ad-banner { opacity: 0; pointer-events: none; }
 .ad-banner { background-color: var(--secondary-bg); border: 1px dashed var(--border-color); text-align: center; color: var(--text-muted); font-size: 0.8rem; box-sizing: border-box; display: flex; justify-content: center; align-items: center; transition: opacity 0.3s; }
-.top-ad { position: fixed; top: 0; width: 100%; height: 40px; z-index: 1001; }
+.top-ad { position: fixed; top: 0; width: 100%; height: 70px; z-index: 1001; }
 .side-ad { display: none; }
 @media (min-width: 1200px) { .side-ad { display: flex; position: fixed; right: 20px; top: 120px; width: 160px; height: 600px; } }
 .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; }
@@ -81,9 +81,11 @@ body:not(.ads-enabled) .ad-banner { opacity: 0; pointer-events: none; }
 .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
 input:checked + .slider { background-color: var(--accent-color); } input:checked + .slider:before { transform: translateX(26px); }
 #captcha-code { font-family: 'Courier New', monospace; font-size: 2rem; background-color: var(--primary-bg); padding: 10px; text-align: center; border-radius: 5px; margin-bottom: 15px; user-select: none; letter-spacing: 5px; text-decoration: line-through; }
-.forum-thread { border: 1px solid var(--border-color); border-radius: 5px; }
-.thread-header { background-color: var(--primary-bg); padding: 15px; border-bottom: 1px solid var(--border-color); }
-.thread-header h4 { margin: 0; text-align: left; }
-.thread-posts { padding: 15px; max-height: 300px; overflow-y: auto; }
-.post { margin-bottom: 15px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
-.post-author { font-weight: bold; color: var(--accent-color); }
+#ai-chat-modal { max-width: 600px; }
+#ai-chat-box { height: 300px; overflow-y: auto; background-color: var(--primary-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 15px; }
+.ai-chat-message { margin-bottom: 10px; padding: 10px 15px; border-radius: 12px; max-width: 80%; }
+.ai-chat-message.user { background-color: var(--accent-color); color: white; margin-left: auto; border-bottom-right-radius: 0; }
+.ai-chat-message.ai { background-color: var(--border-color); border-bottom-left-radius: 0; }
+#ai-chat-form { display: flex; gap: 10px; }
+#ai-chat-form input { flex-grow: 1; margin-bottom: 0; }
+
