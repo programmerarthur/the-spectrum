@@ -7,11 +7,11 @@ function navigate(page, context) {
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===================================================================================
-    // --- SUPABASE SETUP ---
+    // --- SUPABASE & GEMINI SETUP ---
     // ===================================================================================
-    // Your keys have been implemented.
-    const SUPABASE_URL = 'https://eidagqlezomywsjvdqvu.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZGFncWxlem9teXdzanZkcXZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0MjAxMTQsImV4cCI6MjA3NTk5NjExNH0.r4XLwZeSjWqM-CBFD7IT0-uQpzUVt72s2rHnmxSBlNA';
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`; // API Key is handled by the environment
 
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -40,24 +40,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const templates = {
         home: () => `<h1>Welcome to The Spectrum</h1><p>More than just a quiz. Discover your ideology, track its evolution, earn rewards, and discuss your views with the community.</p><div id="daily-quiz-prompt" class="hidden"><h3>Daily Question <span id="daily-streak"></span></h3><p>Earn XP and keep your streak going!</p><button class="big-btn" data-page="daily-quiz">Take Today's Quiz</button></div><div id="activity-feed"><h3>Recent Activity</h3><div id="feed-content"><div class="spinner-container"><div class="spinner"></div></div></div></div><button class="big-btn" data-page="quiz">Take the Full Assessment</button>`,
         quiz: () => `<div id="progress-container"><div id="progress-bar"></div></div><h2 id="question-title"></h2><p id="question-text"></p><div id="standard-answers"><button class="answer-btn btn-sa" data-value="1.5">Strongly Agree</button><button class="answer-btn btn-a" data-value="1.0">Agree</button><button class="answer-btn btn-n" data-value="0.0">Neutral / Unsure</button><button class="answer-btn btn-d" data-value="-1.0">Disagree</button><button class="answer-btn btn-sd" data-value="-1.5">Strongly Disagree</button></div><div id="formulate-prompt"><div class="prompt-arrow">➤</div><span class="prompt-button">Having trouble? Write it in your own words</span></div><div id="formulate-input-area" class="hidden"><p>Explain your position in your own words. The AI will determine your stance.</p><textarea id="custom-answer-text" rows="4"></textarea><button id="submit-custom-btn">Submit My Formulation</button></div>`,
-        results: (type, content) => `<h1>${type === 'daily' ? 'Daily Result' : 'Your Results'}</h1>${content}<button class="big-btn" data-page="home">Back to Home</button>`,
+        results: (type, content) => `<h1>${type === 'daily' ? 'Daily Result' : 'Your Results'}</h1>${content}`,
         profile: () => `<div id="profile-header"><div id="profile-header-content"><div id="profile-gif-container"></div><div><h2 id="profile-username"></h2><div id="friend-button-container"></div></div></div></div><div class="profile-stats"><div id="level-display"></div><div class="xp-bar-container"><div id="xp-bar"></div><span id="xp-text"></span></div></div><h3>Latest Result</h3><div id="profile-results-container"></div><h3>Ideological Journey</h3><div id="history-chart-container"></div><h3>Friends</h3><div id="friends-list"></div>`,
         settings: () => `<h1>Settings</h1><div class="setting-item"><label>Theme</label><div class="toggle-switch"><span>Light</span><label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label><span>Dark</span></div></div><div class="setting-item"><label for="ads-toggle">Show Advertisements</label><label class="switch"><input type="checkbox" id="ads-toggle"><span class="slider"></span></label></div><div id="profile-customization" class="hidden"><h2>Profile Customization</h2><div class="setting-item"><label for="banner-color-picker">Profile Banner Color (Lvl 5+)</label><input type="color" id="banner-color-picker"></div><div class="setting-item"><label for="profile-gif-input">Profile GIF URL (Lvl 20+)</label><input type="text" id="profile-gif-input" placeholder="https://example.com/image.gif"></div><button id="save-customization-btn">Save Customizations</button></div><div id="account-actions"><h2>Account</h2><button id="change-password-btn">Change Password</button></div>`,
-        forums: () => `<h1>Forums</h1><p>A place for discussion. Posts are public.</p><div id="forum-threads"></div>`,
+        forums: () => `<h1>Forums & AI Chat</h1><div class="forum-tabs"><button class="tab-link active" data-tab="forum-main">Discussions</button><button class="tab-link" data-tab="ai-chat">🤖 AI Advisor</button></div><div id="forum-main" class="tab-content active"><p>A place for discussion. Posts are public.</p><div id="forum-threads"></div></div><div id="ai-chat" class="tab-content hidden"><p>Ask our AI Political Advisor anything about political concepts, history, or ideologies.</p><div id="ai-chat-box"><div class="ai-chat-message ai">Hello! Ask me any political question.</div></div><form id="ai-chat-form"><input type="text" id="ai-chat-input" placeholder="e.g., 'What is Keynesian economics?'" required><button type="submit">Send</button></form></div>`,
         community: () => `<h1>Community</h1><p>Find other users on The Spectrum.</p><input type="text" id="user-search" placeholder="Search for a username..."><div id="user-list"></div>`
     };
 
     // ===================================================================================
-    // --- ROUTING & PAGE RENDERING ---
+    // --- INITIALIZATION & ROUTING ---
     // ===================================================================================
+    async function init() {
+        attachEventListeners();
+        db.auth.onAuthStateChange(async (event, session) => {
+            const previousUser = currentUser?.id;
+            await handleAuthChange(session);
+            if (event === "PASSWORD_RECOVERY") showModal('change-password-modal');
+            else if ((event === "SIGNED_IN" && previousUser !== session?.user?.id) || event === "SIGNED_OUT") navigate('home');
+        });
+        const { data: { session } } = await db.auth.getSession();
+        await handleAuthChange(session);
+        applySettings();
+        handleRouteChange();
+        window.addEventListener('hashchange', handleRouteChange);
+    }
+
     function handleRouteChange() { const hash = window.location.hash || '#home'; const [page, context] = hash.substring(1).split('/'); renderPage(page, context); }
+
+    // ===================================================================================
+    // --- PAGE & MODAL RENDERING ---
+    // ===================================================================================
     async function renderPage(pageId, context = null) {
         if (!pageId || !templates[pageId]) pageId = 'home';
         mainContainer.innerHTML = `<div class="spinner-container"><div class="spinner"></div></div>`;
-        
         try {
             mainContainer.innerHTML = templates[pageId]();
-            
             switch(pageId) {
                 case 'home': await loadHomePage(); break;
                 case 'quiz': startQuiz('full'); break;
@@ -71,11 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAuthState();
     }
     
+    function showModal(modalId) { document.getElementById('modal-backdrop').classList.remove('hidden'); document.getElementById(modalId).classList.remove('hidden'); }
+    function hideModals() { document.getElementById('modal-backdrop').classList.add('hidden'); document.querySelectorAll('.modal').forEach(m => { m.classList.add('hidden'); const errorMsg = m.querySelector('.error-msg'); if(errorMsg) errorMsg.textContent = ''; }); }
+    
     // --- PAGE-SPECIFIC LOADERS ---
     async function loadHomePage() { if (currentUser && localUserProfile) { const streakEl = document.getElementById('daily-streak'); streakEl.textContent = localUserProfile.daily_streak > 0 ? `🔥 ${localUserProfile.daily_streak}` : ''; document.getElementById('daily-quiz-prompt').classList.remove('hidden'); } await loadActivityFeed(); }
     async function loadProfilePage(userIdToView) { const profileId = userIdToView || (currentUser ? currentUser.id : null); if (!profileId) { navigate('home'); return; } mainContainer.innerHTML = templates.profile(); const [profileData, resultsData, friendsData] = await Promise.all([fetchUserProfile(profileId), fetchUserResults(profileId), fetchUserFriends(profileId)]); if (!profileData) { mainContainer.innerHTML = "<h1>User not found.</h1>"; return; } document.getElementById('profile-header').style.backgroundColor = profileData.banner_color; document.getElementById('profile-gif-container').innerHTML = profileData.profile_gif_url ? `<img src="${profileData.profile_gif_url}" alt="Profile GIF">` : '🖼️'; document.getElementById('profile-username').textContent = profileData.username; updateLevelAndXp(profileData.xp); const resultsContainer = document.getElementById('profile-results-container'); if (resultsData && resultsData.length > 0) { const latestResult = resultsData[0]; const percentages = {econ: latestResult.econ_score, dipl: latestResult.dipl_score, govt: latestResult.govt_score, scty: latestResult.scty_score}; resultsContainer.innerHTML = `<canvas id="profileChart"></canvas><h4>Closest Match: <span>${latestResult.ideology_name}</span></h4>`; setTimeout(() => renderRadarChart(document.getElementById('profileChart'), percentages, 'profileChart'), 50); } else { resultsContainer.innerHTML = `<div class="empty-state"><p>This user has not completed the quiz yet.</p></div>`; } const historyContainer = document.getElementById('history-chart-container'); if (resultsData && resultsData.length > 1) { historyContainer.innerHTML = `<canvas id="historyChart"></canvas>`; setTimeout(() => renderHistoryChart(document.getElementById('historyChart'), resultsData), 50); } else { historyContainer.innerHTML = `<div class="empty-state"><p>Take the quiz more than once to see your ideological journey graphed here.</p></div>`; } const friendBtnContainer = document.getElementById('friend-button-container'); if (currentUser && currentUser.id !== profileId) { const isFriend = await checkFriendship(currentUser.id, profileId); friendBtnContainer.innerHTML = `<button id="add-friend-btn" data-isfriend="${isFriend}" data-userid="${profileId}">${isFriend ? 'Remove Friend' : 'Add Friend'}</button>`; document.getElementById('add-friend-btn').addEventListener('click', handleFriendAction); } const friendsListContainer = document.getElementById('friends-list'); if (friendsData && friendsData.length > 0) { friendsListContainer.innerHTML = '<h4>Friends</h4>' + friendsData.map(friend => `<div class="user-card" onclick="navigate('profile', '${friend.id}')">${friend.username}</div>`).join(''); } else { friendsListContainer.innerHTML = `<div class="empty-state"><p>No friends yet. Find some in the <a href="#community">Community</a> tab!</p></div>`; } }
     function loadSettingsPage() { const settings = getSettings(); document.getElementById('theme-toggle').checked = settings.theme === 'dark'; document.getElementById('ads-toggle').checked = settings.adsEnabled; document.getElementById('theme-toggle').addEventListener('change', handleThemeToggle); document.getElementById('ads-toggle').addEventListener('change', handleAdsToggle); const customizationDiv = document.getElementById('profile-customization'); if (currentUser) { customizationDiv.classList.remove('hidden'); const level = calculateLevel(localUserProfile.xp); const colorPicker = document.getElementById('banner-color-picker'); colorPicker.value = localUserProfile.banner_color || '#3b3b47'; colorPicker.disabled = level < 5; const gifInput = document.getElementById('profile-gif-input'); gifInput.value = localUserProfile.profile_gif_url || ''; gifInput.disabled = level < 20; document.getElementById('save-customization-btn').addEventListener('click', saveProfileCustomizations); document.getElementById('change-password-btn').addEventListener('click', () => showModal('change-password-modal')); document.getElementById('change-password-form').addEventListener('submit', handleChangePassword); } else { customizationDiv.classList.add('hidden'); document.getElementById('account-actions').classList.add('hidden');} }
-    async function loadForums() { const threadsContainer = document.getElementById('forum-threads'); const threads = [ { id: 1, title: 'Debate: Universal Basic Income' }]; threadsContainer.innerHTML = threads.map(t => ` <div class="forum-thread" id="thread-${t.id}"> <div class="thread-header"><h4>${t.title}</h4></div> <div class="thread-posts"></div> <div class="reply-area"> <textarea placeholder="Write a reply..."></textarea> <button data-thread-id="${t.id}">Post Reply</button> </div> </div>`).join(''); threads.forEach(t => { const posts = JSON.parse(localStorage.getItem(`forum_thread_${t.id}`)) || [{author: 'Admin', content: 'Be the first to post!'}]; const postsContainer = document.querySelector(`#thread-${t.id} .thread-posts`); postsContainer.innerHTML = posts.map(p => `<div class="post"><span class="post-author">${p.author}:</span><span class="post-content">${p.content}</span></div>`).join(''); }); document.getElementById('forum-threads').addEventListener('click', e => { if (e.target.tagName === 'BUTTON' && e.target.dataset.threadId) { const content = e.target.previousElementSibling.value; if (!content.trim()) return; handlePostReply(e.target.dataset.threadId, content); e.target.previousElementSibling.value = ''; } });}
+    async function loadForums() { document.getElementById('ai-chat-form').addEventListener('submit', handleAIChatSubmit); document.querySelectorAll('.tab-link').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.tab-link, .tab-content').forEach(el => el.classList.remove('active')); tab.classList.add('active'); document.getElementById(tab.dataset.tab).classList.add('active'); })); const threadsContainer = document.getElementById('forum-threads'); const threads = [ { id: 1, title: 'Debate: Universal Basic Income' }]; threadsContainer.innerHTML = threads.map(t => ` <div class="forum-thread" id="thread-${t.id}"> <div class="thread-header"><h4>${t.title}</h4></div> <div class="thread-posts"></div> <div class="reply-area"> <textarea placeholder="Write a reply..."></textarea> <button data-thread-id="${t.id}">Post Reply</button> </div> </div>`).join(''); threads.forEach(t => { const posts = JSON.parse(localStorage.getItem(`forum_thread_${t.id}`)) || [{author: 'Admin', content: 'Be the first to post!'}]; const postsContainer = document.querySelector(`#thread-${t.id} .thread-posts`); postsContainer.innerHTML = posts.map(p => `<div class="post"><span class="post-author">${p.author}:</span><span class="post-content">${p.content}</span></div>`).join(''); }); document.getElementById('forum-threads').addEventListener('click', e => { if (e.target.tagName === 'BUTTON' && e.target.dataset.threadId) { const content = e.target.previousElementSibling.value; if (!content.trim()) return; handlePostReply(e.target.dataset.threadId, content); e.target.previousElementSibling.value = ''; } });}
     async function loadCommunityPage() { const userList = document.getElementById('user-list'); userList.innerHTML = `<div class="spinner-container"><div class="spinner"></div></div>`; const { data, error } = await db.from('profiles').select('id, username, xp').order('xp', { ascending: false }).limit(20); if (error) { userList.innerHTML = `<p class="error-msg">Could not load users.</p>`; return; } userList.innerHTML = data.map(user => `<div class="user-card" onclick="navigate('profile', '${user.id}')"><span class="user-card-info">${user.username} (Lvl ${calculateLevel(user.xp)})</span><span>View Profile</span></div>`).join(''); document.getElementById('user-search').addEventListener('input', async (e) => { const searchTerm = e.target.value; if (searchTerm.length < 2) return; const { data } = await db.from('profiles').select('id, username, xp').ilike('username', `%${searchTerm}%`); userList.innerHTML = data.map(user => `<div class="user-card" onclick="navigate('profile', '${user.id}')"><span class="user-card-info">${user.username} (Lvl ${calculateLevel(user.xp)})</span><span>View Profile</span></div>`).join(''); }); }
     async function loadActivityFeed() { const feedContent = document.getElementById('feed-content'); const { data, error } = await db.from('quiz_results').select(`user_id, ideology_name, profiles(username)`).order('created_at', { ascending: false }).limit(5); if (error || !data || !data.length) { feedContent.innerHTML = `<div class="empty-state"><p>No recent activity. Be the first to take the quiz!</p></div>`; return; } feedContent.innerHTML = data.map(item => `<div class="post"><a href="#profile/${item.user_id}" class="post-author">${item.profiles.username}</a> completed the quiz and is a ${item.ideology_name}.</div>`).join(''); }
 
@@ -85,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadQuestion() { if (quizState.promptTimerId) clearTimeout(quizState.promptTimerId); if (quizState.currentQuestionIndex >= quizState.questions.length) { showResults(); return; } const quizContainer = mainContainer.querySelector('.page.active'); resetFormulateUI(quizContainer); const question = quizState.questions[quizState.currentQuestionIndex]; quizContainer.querySelector('#question-title').textContent = `Question ${quizState.currentQuestionIndex + 1} of ${quizState.questions.length}`; quizContainer.querySelector('#question-text').textContent = question.q; updateProgressBar(); const promptEl = quizContainer.querySelector('#formulate-prompt'); if (promptEl) { promptEl.classList.add('hidden'); quizState.promptTimerId = setTimeout(() => promptEl.classList.remove('hidden'), 30000); } }
     function handleAnswer(multiplier) { if (quizState.promptTimerId) clearTimeout(quizState.promptTimerId); quizState.lastAnswers.push(multiplier); if (quizState.lastAnswers.length > 5) quizState.lastAnswers.shift(); const allSame = quizState.type === 'full' && quizState.lastAnswers.length === 5 && quizState.lastAnswers.every(a => a === quizState.lastAnswers[0]); if (allSame) { showCaptcha(); return; } processAnswer(multiplier); }
     function processAnswer(multiplier) { if (quizState.type === 'daily') { const question = quizState.questions[0]; quizState.scores[question.axis] = question.effect * multiplier; } else { const question = quizState.questions[quizState.currentQuestionIndex]; for (const axis in question.effect) { quizState.scores[axis] += question.effect[axis] * multiplier; } } quizState.currentQuestionIndex++; loadQuestion(); }
-    async function showResults() { let content = ''; quizState.percentages = {}; if (quizState.type === 'daily') { const question = quizState.questions[0]; const axisScore = quizState.scores[question.axis]; let resultText = "You were neutral on the topic."; if ((axisScore > 0 && question.effect > 0) || (axisScore < 0 && question.effect < 0)) resultText = "You leaned towards agreeing with the statement."; if ((axisScore < 0 && question.effect > 0) || (axisScore > 0 && question.effect < 0)) resultText = "You leaned towards disagreeing with the statement."; content = `<p>${resultText}</p><p>You earned ${quizState.xpReward} XP!</p>`; } else { for (const axis in quizState.scores) { quizState.percentages[axis] = quizState.maxScores[axis] === 0 ? 50 : 50 + 50 * (quizState.scores[axis] / quizState.maxScores[axis]); } const closestIdeology = findClosestIdeology(quizState.percentages); content = createResultsHTML(closestIdeology); setTimeout(() => { renderRadarChart(document.getElementById('resultsChart'), quizState.percentages, 'resultsChart'); renderAxisDetails(quizState.percentages); if (currentUser) { const saveBtn = document.getElementById('save-results-btn'); saveBtn.classList.remove('hidden'); saveBtn.onclick = () => saveFullQuizResults(saveBtn, quizState.percentages, closestIdeology); } }, 50); } if (currentUser) await addXp(quizState.xpReward); if (quizState.type === 'daily' && currentUser) await updateDailyStreak(); mainContainer.innerHTML = templates.results(quizState.type, content); }
+    async function showResults() { let content = ''; quizState.percentages = {}; if (quizState.type === 'daily') { const question = quizState.questions[0]; const axisScore = quizState.scores[question.axis]; let resultText = "You were neutral on the topic."; if ((axisScore > 0 && question.effect > 0) || (axisScore < 0 && question.effect < 0)) resultText = "You leaned towards agreeing with the statement."; if ((axisScore < 0 && question.effect > 0) || (axisScore > 0 && question.effect < 0)) resultText = "You leaned towards disagreeing with the statement."; content = `<p>${resultText}</p><p>You earned ${quizState.xpReward} XP!</p>`; } else { for (const axis in quizState.scores) { quizState.percentages[axis] = quizState.maxScores[axis] === 0 ? 50 : 50 + 50 * (quizState.scores[axis] / quizState.maxScores[axis]); } const closestIdeology = findClosestIdeology(quizState.percentages); content = createResultsHTML(closestIdeology); setTimeout(() => { renderRadarChart(document.getElementById('resultsChart'), quizState.percentages, 'resultsChart'); renderAxisDetails(quizState.percentages); document.getElementById('explain-btn').addEventListener('click', handleExplainIdeology); if (currentUser) { const saveBtn = document.getElementById('save-results-btn'); saveBtn.classList.remove('hidden'); saveBtn.onclick = () => saveFullQuizResults(saveBtn, quizState.percentages, closestIdeology); } }, 50); } if (currentUser) await addXp(quizState.xpReward); if (quizState.type === 'daily' && currentUser) await updateDailyStreak(); mainContainer.innerHTML = templates.results(quizState.type, content); }
     async function saveFullQuizResults(button, percentages, ideology) { if (!currentUser) return; showButtonSpinner(button); const { error } = await db.from('quiz_results').insert({ user_id: currentUser.id, econ_score: percentages.econ, dipl_score: percentages.dipl, govt_score: percentages.govt, scty_score: percentages.scty, ideology_name: ideology.name }); hideButtonSpinner(button, 'Save Results to Profile'); if (error) { showToast('Error saving results.', 'error'); console.error(error); } else { button.textContent = 'Saved!'; button.disabled = true; showToast('Results saved to your profile!', 'success'); } }
 
     // --- AUTHENTICATION & PROFILE HANDLERS ---
@@ -102,6 +122,77 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleFriendAction(e) { const target = e.target; const isFriend = target.dataset.isfriend === 'true'; const friendId = target.dataset.userid; showButtonSpinner(target); if (isFriend) { const { error } = await db.from('friends').delete().match({ user_id_1: currentUser.id, user_id_2: friendId }); if (!error) { target.textContent = 'Add Friend'; target.dataset.isfriend = 'false'; showToast("Friend removed.", "success"); } } else { const { error } = await db.from('friends').insert({ user_id_1: currentUser.id, user_id_2: friendId }); if (!error) { target.textContent = 'Remove Friend'; target.dataset.isfriend = 'true'; showToast("Friend added!", "success"); } } hideButtonSpinner(target, target.textContent); }
     function handleCustomAnswer() { const text = mainContainer.querySelector('#custom-answer-text').value; if (!text.trim()) return; const multiplier = analyzeText(text); handleAnswer(multiplier); }
     function handlePostReply(threadId, content) { const posts = JSON.parse(localStorage.getItem(`forum_thread_${threadId}`)) || []; const newPost = { author: localUserProfile ? localUserProfile.username : 'Guest', content: content.trim() }; posts.push(newPost); localStorage.setItem(`forum_thread_${threadId}`, JSON.stringify(posts)); loadForums(); }
+
+    // --- GEMINI API HANDLERS ---
+    async function handleExplainIdeology(e) {
+        const button = e.target;
+        const ideologyName = button.dataset.ideology;
+        const explanationDiv = document.getElementById('ideology-explanation');
+
+        showButtonSpinner(button);
+        explanationDiv.innerHTML = `<div class="spinner-container"><div class="spinner"></div></div>`;
+        explanationDiv.classList.remove('hidden');
+
+        const prompt = `Explain the political ideology "${ideologyName}" in a simple, neutral, and concise paragraph.`;
+        const resultText = await callGeminiAPI(prompt);
+
+        explanationDiv.innerHTML = resultText || "<p class='error-msg'>Could not get explanation.</p>";
+        hideButtonSpinner(button, "✨ Explain My Ideology");
+    }
+
+    async function handleAIChatSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const input = form.querySelector('input');
+        const button = form.querySelector('button');
+        const chatBox = document.getElementById('ai-chat-box');
+        const userMessage = input.value;
+
+        if (!userMessage.trim()) return;
+
+        // Display user message
+        chatBox.innerHTML += `<div class="ai-chat-message user">${userMessage}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        input.value = '';
+        showButtonSpinner(button);
+
+        // Call Gemini API
+        const systemPrompt = "You are a neutral, helpful political science advisor. Answer the user's question clearly and concisely, without taking a side.";
+        const resultText = await callGeminiAPI(userMessage, systemPrompt);
+
+        // Display AI response
+        const aiMessage = resultText || "Sorry, I couldn't process that request.";
+        chatBox.innerHTML += `<div class="ai-chat-message ai">${aiMessage}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        hideButtonSpinner(button, "Send");
+    }
+
+    async function callGeminiAPI(prompt, systemPrompt = null) {
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+        };
+
+        if (systemPrompt) {
+            payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+        }
+
+        try {
+            const response = await fetch(GEMINI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                console.error("Gemini API Error:", response.status, await response.text());
+                return null;
+            }
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            return null;
+        }
+    }
 
     // --- DATABASE & ASYNC HELPERS ---
     async function fetchUserProfile(userId) { const { data } = await db.from('profiles').select('*').eq('id', userId).single(); return data; }
@@ -129,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function findClosestIdeology(userScores) { const userScoresConverted = { econ: (userScores.econ - 50) * 2, dipl: (userScores.dipl - 50) * 2, govt: (userScores.govt - 50) * 2, scty: (userScores.scty - 50) * 2 }; let closestMatch = null; let minDistance = Infinity; ideologies.forEach(ideology => { const dist = Math.sqrt( Math.pow(userScoresConverted.econ - ideology.scores.econ, 2) + Math.pow(userScoresConverted.dipl - ideology.scores.dipl, 2) + Math.pow(userScoresConverted.govt - ideology.scores.govt, 2) + Math.pow(userScoresConverted.scty - ideology.scores.scty, 2) ); if (dist < minDistance) { minDistance = dist; closestMatch = ideology; } }); return closestMatch; }
     function showCaptcha() { const code = Math.random().toString(36).substring(2, 8).toUpperCase(); quizState.captchaCode = code; document.getElementById('captcha-code').textContent = code; document.getElementById('captcha-input').value = ''; document.getElementById('captcha-error').textContent = ''; showModal('captcha-modal'); }
     function verifyCaptcha() { const input = document.getElementById('captcha-input').value.toUpperCase(); if (input === quizState.captchaCode) { quizState.lastAnswers = []; hideModals(); processAnswer(0); } else { document.getElementById('captcha-error').textContent = 'Incorrect code. Please try again.'; showCaptcha(); } }
-    function createResultsHTML(ideology) { return ` <div class="results-grid"> <div class="results-chart"><canvas id="resultsChart"></canvas></div> <div class="results-summary"><h3>Closest Match: <span id="ideology-match">${ideology.name}</span></h3><p>Your views align most closely with this ideology.</p></div> </div> <div id="axis-details"></div> <button id="save-results-btn" class="big-btn hidden">Save Results to Profile</button> <button class="big-btn" data-page="quiz">Take Again</button>`; }
+    function createResultsHTML(ideology) { return ` <div class="results-grid"> <div class="results-chart"><canvas id="resultsChart"></canvas></div> <div class="results-summary"><h3>Closest Match: <span id="ideology-match">${ideology.name}</span></h3><p>Your views align most closely with this ideology.</p><button id="explain-btn" class="big-btn" data-ideology="${ideology.name}">✨ Explain My Ideology</button><div id="ideology-explanation" class="hidden"></div></div> </div> <div id="axis-details"></div> <button id="save-results-btn" class="big-btn hidden">Save Results to Profile</button> <button class="big-btn" data-page="quiz">Take Again</button>`; }
     function renderAxisDetails(percentages) { document.getElementById('axis-details').innerHTML = ` <div class="axis"><div class="axis-labels"><span>Equality</span><span>Economic</span><span>Markets</span></div><div class="result-bar-container"><div style="width:${percentages.econ}%; background: linear-gradient(to left, var(--agree-strong), var(--disagree-strong)); height: 100%; border-radius: 5px;"></div></div></div> <div class="axis"><div class="axis-labels"><span>World</span><span>Diplomatic</span><span>Nation</span></div><div class="result-bar-container"><div style="width:${percentages.dipl}%; background: linear-gradient(to left, #5bc0de, #f0ad4e); height: 100%; border-radius: 5px;"></div></div></div> <div class="axis"><div class="axis-labels"><span>Liberty</span><span>Civil</span><span>Authority</span></div><div class="result-bar-container"><div style="width:${percentages.govt}%; background: linear-gradient(to left, var(--disagree-strong), var(--agree-strong)); height: 100%; border-radius: 5px;"></div></div></div> <div class="axis"><div class="axis-labels"><span>Progress</span><span>Societal</span><span>Tradition</span></div><div class="result-bar-container"><div style="width:${percentages.scty}%; background: linear-gradient(to left, #5bc0de, #f0ad4e); height: 100%; border-radius: 5px;"></div></div></div> `; }
     function renderRadarChart(canvas, percentages, instanceVar) { if (!canvas) return; const ctx = canvas.getContext('2d'); if (chartInstances[instanceVar]) chartInstances[instanceVar].destroy(); const isDarkTheme = getSettings().theme === 'dark'; const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'; const labelColor = isDarkTheme ? '#e0e0e0' : '#333'; const data = { labels: [`Econ: ${percentages.econ.toFixed(1)}%`, `Dipl: ${percentages.dipl.toFixed(1)}%`, `Govt: ${percentages.govt.toFixed(1)}%`, `Scty: ${percentages.scty.toFixed(1)}%`], datasets: [{ label: 'Your Score', data: [percentages.econ, percentages.dipl, percentages.govt, percentages.scty], fill: true, backgroundColor: 'rgba(0, 170, 255, 0.2)', borderColor: 'rgb(0, 170, 255)', pointBackgroundColor: 'rgb(0, 170, 255)', pointBorderColor: '#fff' }] }; chartInstances[instanceVar] = new Chart(ctx, { type: 'radar', data, options: { scales: { r: { angleLines: { color: gridColor }, grid: { color: gridColor }, pointLabels: { color: labelColor, font: { size: 11 } }, min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } } }); }
     function renderHistoryChart(canvas, results) { if (!canvas) return; const ctx = canvas.getContext('2d'); if (chartInstances.historyChart) chartInstances.historyChart.destroy(); const isDarkTheme = getSettings().theme === 'dark'; const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'; const labelColor = isDarkTheme ? '#e0e0e0' : '#333'; const labels = results.map(r => new Date(r.created_at).toLocaleDateString()).reverse(); const datasets = [ { label: 'Economic', data: results.map(r => r.econ_score).reverse(), borderColor: 'var(--disagree-strong)', tension: 0.1, fill: false }, { label: 'Diplomatic', data: results.map(r => r.dipl_score).reverse(), borderColor: '#f0ad4e', tension: 0.1, fill: false }, { label: 'Civil', data: results.map(r => r.govt_score).reverse(), borderColor: 'var(--agree-strong)', tension: 0.1, fill: false }, { label: 'Societal', data: results.map(r => r.scty_score).reverse(), borderColor: '#5bc0de', tension: 0.1, fill: false } ]; chartInstances.historyChart = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { scales: { y: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: labelColor } }, x: { grid: { color: gridColor }, ticks: { color: labelColor } } }, plugins: { legend: { labels: { color: labelColor } } } } }); }
