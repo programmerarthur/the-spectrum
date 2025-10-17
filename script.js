@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================================================================================
     // --- SUPABASE & GEMINI SETUP ---
     // ===================================================================================
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_URL = 'https://eidagqlezomywsjvdqvu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZGFncWxlem9teXdzanZkcXZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0MjAxMTQsImV4cCI6MjA3NTk5NjExNH0.r4XLwZeSjWqM-CBFD7IT0-uQpzUVt72s2rHnmxSBlNA';
     const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`; // API Key is handled by the environment
 
     const { createClient } = supabase;
@@ -245,4 +245,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
 
