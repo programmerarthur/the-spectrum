@@ -1,128 +1,170 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Spectrum - Political Ideology Platform</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Zilla+Slab:wght@700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8479255332582338" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Tailwind CSS Configuration
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Zilla Slab', 'serif'],
+                    },
+                    colors: {
+                        primary: {
+                            '50': '#eff6ff', '100': '#dbeafe', '200': '#bfdbfe', '300': '#93c5fd', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8', '800': '#1e40af', '900': '#1e3a8a',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="dark-theme">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 min-h-screen flex flex-col font-sans">
 
     <div class="ad-banner top-ad">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8479255332582338"
-             data-ad-slot="5781961906"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8479255332582338" data-ad-slot="5781961906" data-ad-format="auto" data-full-width-responsive="true"></ins>
     </div>
 
-    <nav>
-        <div class="nav-brand"><a href="#home">The Spectrum</a></div>
-        <div class="nav-links">
-            <a href="#home">Home</a>
-            <a href="#quiz">Full Quiz</a>
-            <a href="#community">Community</a>
-            <a href="#forums">Forums</a>
+    <nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#home" class="flex-shrink-0 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white"><i data-feather="compass" class="w-5 h-5"></i></div>
+                        <span class="font-heading text-2xl font-bold text-gray-900 dark:text-white">The Spectrum</span>
+                    </a>
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-4">
+                            <a href="#home" class="nav-link px-3 py-2 rounded-md text-sm">Home</a>
+                            <a href="#quiz" class="nav-link px-3 py-2 rounded-md text-sm">Full Quiz</a>
+                            <a href="#community" class="nav-link px-3 py-2 rounded-md text-sm">Community</a>
+                            <a href="#howitworks" class="nav-link px-3 py-2 rounded-md text-sm">How It Works</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <button id="theme-toggle" class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <i data-feather="moon" class="dark:hidden"></i>
+                        <i data-feather="sun" class="hidden dark:block"></i>
+                    </button>
+                    <div id="auth-links" class="hidden items-center gap-2 ml-4">
+                        <button id="login-btn" class="btn btn-secondary text-sm">Login</button>
+                        <button id="register-btn" class="btn btn-primary text-sm">Register</button>
+                    </div>
+                    <div id="user-menu" class="hidden relative ml-3">
+                        <div>
+                            <button id="user-menu-btn" class="max-w-xs bg-gray-800 rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                                <span class="sr-only">Open user menu</span>
+                                <div id="user-avatar" class="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold"></div>
+                            </button>
+                        </div>
+                        <div id="user-dropdown" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            <a href="#profile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Your Profile</a>
+                            <a href="#settings" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
+                            <a href="#" id="logout-btn" class="block px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
+                        </div>
+                    </div>
+                    <div class="md:hidden ml-2">
+                        <button id="mobile-menu-btn" class="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i data-feather="menu"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="auth-links">
-            <a href="#" id="login-btn">Login</a>
-            <a href="#" id="register-btn">Register</a>
-        </div>
-        <div id="user-session" class="hidden">
-            <a href="#profile" id="profile-link">Profile</a>
-            <a href="#" id="logout-btn">Logout</a>
+        <div id="mobile-menu" class="hidden md:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#home" class="block nav-link px-3 py-2 rounded-md text-base">Home</a>
+                <a href="#quiz" class="block nav-link px-3 py-2 rounded-md text-base">Full Quiz</a>
+                <a href="#community" class="block nav-link px-3 py-2 rounded-md text-base">Community</a>
+                <a href="#howitworks" class="block nav-link px-3 py-2 rounded-md text-base">How It Works</a>
+            </div>
         </div>
     </nav>
 
-    <main class="container">
-        <!-- All page content is dynamically injected here -->
-        <div class="spinner-container"><div class="spinner"></div></div>
+    <main class="container w-full max-w-5xl mx-auto px-4 py-8">
+        <div class="spinner-container"><div class="page-spinner"></div></div>
     </main>
 
     <div class="ad-banner side-ad">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8479255332582338"
-             data-ad-slot="3207769459"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8479255332582338" data-ad-slot="3207769459" data-ad-format="auto" data-full-width-responsive="true"></ins>
     </div>
 
     <!-- Modals -->
-    <div id="modal-backdrop" class="hidden"></div>
+    <div id="modal-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-blur-sm z-50 hidden"></div>
     <div id="login-modal" class="modal hidden">
-        <h2>Login</h2>
-        <form id="login-form">
-            <input type="email" id="login-email" placeholder="Email" required>
-            <input type="password" id="login-pass" placeholder="Password" required>
-            <a href="#" id="forgot-password-link">Forgot Password?</a>
-            <button type="submit">Log In</button>
-            <p class="error-msg" id="login-error"></p>
+        <h2 class="font-heading text-2xl text-center">Login</h2>
+        <form id="login-form" class="mt-4 space-y-4">
+            <input type="email" id="login-email" placeholder="Email" required class="input-field">
+            <input type="password" id="login-pass" placeholder="Password" required class="input-field">
+            <a href="#" id="forgot-password-link" class="block text-sm text-primary-500 hover:underline text-right">Forgot Password?</a>
+            <button type="submit" class="btn btn-primary w-full">Log In</button>
+            <p class="error-msg text-center" id="login-error"></p>
         </form>
     </div>
     <div id="register-modal" class="modal hidden">
-        <h2>Register</h2>
-        <form id="register-form">
-            <input type="email" id="register-email" placeholder="Email" required>
-            <input type="text" id="register-user" placeholder="Username (min. 3 characters)" required>
-            <input type="password" id="register-pass" placeholder="Password (min. 6 characters)" required>
-            <button type="submit">Create Account</button>
-            <p class="error-msg" id="register-error"></p>
+        <h2 class="font-heading text-2xl text-center">Register</h2>
+        <form id="register-form" class="mt-4 space-y-4">
+            <input type="email" id="register-email" placeholder="Email" required class="input-field">
+            <input type="text" id="register-user" placeholder="Username (min. 3 characters)" required class="input-field">
+            <input type="password" id="register-pass" placeholder="Password (min. 6 characters)" required class="input-field">
+            <button type="submit" class="btn btn-primary w-full">Create Account</button>
+            <p class="error-msg text-center" id="register-error"></p>
         </form>
     </div>
     <div id="forgot-password-modal" class="modal hidden">
-        <h2>Reset Password</h2>
-        <form id="forgot-password-form">
-            <p>Enter your email to receive a password reset link.</p>
-            <input type="email" id="forgot-email" placeholder="Your Email" required>
-            <button type="submit">Send Reset Link</button>
-            <p class="success-msg hidden" id="forgot-success"></p>
+        <h2 class="font-heading text-2xl text-center">Reset Password</h2>
+        <form id="forgot-password-form" class="mt-4 space-y-4">
+            <p class="text-center text-sm text-gray-600 dark:text-gray-400">Enter your email to receive a password reset link.</p>
+            <input type="email" id="forgot-email" placeholder="Your Email" required class="input-field">
+            <button type="submit" class="btn btn-primary w-full">Send Reset Link</button>
+            <p class="success-msg text-center hidden" id="forgot-success"></p>
         </form>
     </div>
     <div id="change-password-modal" class="modal hidden">
-        <h2>Create a New Password</h2>
-        <form id="change-password-form">
-            <input type="password" id="change-pass" placeholder="New Password (min. 6 characters)" required>
-            <button type="submit">Update Password</button>
-            <p class="error-msg" id="change-password-error"></p>
+        <h2 class="font-heading text-2xl text-center">Create a New Password</h2>
+        <form id="change-password-form" class="mt-4 space-y-4">
+            <input type="password" id="change-pass" placeholder="New Password (min. 6 characters)" required class="input-field">
+            <button type="submit" class="btn btn-primary w-full">Update Password</button>
+            <p class="error-msg text-center" id="change-password-error"></p>
         </form>
     </div>
     <div id="captcha-modal" class="modal hidden">
-        <h2>Are you paying attention?</h2>
-        <p>To prevent spam, please type the code below to continue.</p>
-        <div id="captcha-code"></div>
-        <input type="text" id="captcha-input" placeholder="Enter code here" autocomplete="off">
-        <button id="captcha-submit">Continue Quiz</button>
-        <p class="error-msg" id="captcha-error"></p>
+        <h2 class="font-heading text-2xl text-center">Are you paying attention?</h2>
+        <p class="text-center">To prevent spam, please type the code below to continue.</p>
+        <div id="captcha-code" class="my-4 text-center font-mono text-3xl tracking-widest bg-gray-200 dark:bg-gray-700 p-4 rounded-lg select-none"></div>
+        <input type="text" id="captcha-input" placeholder="Enter code here" autocomplete="off" class="input-field text-center">
+        <button id="captcha-submit" class="btn btn-primary w-full mt-2">Continue Quiz</button>
+        <p class="error-msg text-center" id="captcha-error"></p>
     </div>
-    <div id="ai-chat-modal" class="modal hidden">
-        <h2>🤖 AI Political Advisor</h2>
-        <div id="ai-chat-box">
-            <div class="ai-chat-message ai">Hello! Ask me any political question.</div>
-        </div>
-        <form id="ai-chat-form">
-            <input type="text" id="ai-chat-input" placeholder="Ask about an ideology, event, or concept..." required>
-            <button type="submit">Send</button>
-        </form>
-    </div>
-
 
     <div id="toast-container"></div>
 
-    <footer>
-        <p>Developed by Gemini. Inspired by 8values. | <a href="#settings">Settings</a></p>
-        <p><strong>Disclaimer:</strong> This is an experimental, work-in-progress tool. Results are for entertainment and may not be 100% correct.</p>
+    <footer class="mt-auto">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+                <p>Developed by Gemini. Inspired by 8values. | <a href="#settings" class="hover:underline">Settings</a></p>
+                <p class="mt-1"><strong>Disclaimer:</strong> This is an experimental, work-in-progress tool. Results are for entertainment and may not be 100% correct.</p>
+            </div>
+        </div>
     </footer>
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
