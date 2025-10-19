@@ -3,8 +3,8 @@
 // -----------------------------------------------------------------
 // TODO: Add your Supabase URL and Anon Key here
 // -----------------------------------------------------------------
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://eidagqlezomywsjvdqvu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpZGFncWxlem9teXdzanZkcXZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0MjAxMTQsImV4cCI6MjA3NTk5NjExNH0.r4XLwZeSjWqM-CBFD7IT0-uQpzUVt72s2rHnmxSBlNA';
 // -----------------------------------------------------------------
 
 let client;
@@ -17,5 +17,6 @@ try {
     console.error("Supabase client failed to initialize.", e.message);
     alert(`Error: Could not connect to the backend. ${e.message}`);
 }
+
 
 export const supabase = client;
