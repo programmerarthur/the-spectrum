@@ -13,6 +13,7 @@
 
     let supabase;
     try {
+        // FIX: Use window.supabase to access the global object from the CDN
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
         console.error("Supabase client failed to initialize.", e);
@@ -39,6 +40,7 @@
             if (!supabase) return; // Don't run if Supabase failed
 
             // Initialize Feather Icons
+            // FIX: This now runs safely *after* feather.min.js is loaded
             feather.replace();
 
             // Setup global event listeners
@@ -53,7 +55,6 @@
             });
 
             // Handle Password Reset Flow
-            // This checks if the user landed from a password reset link
             App.auth.handlePasswordResetToken();
 
             // Initial Route
@@ -73,25 +74,29 @@
             },
 
             async handleRouteChange() {
-                const hash = window.location.hash.replace('#', '') || '/';
-                const [path, param] = hash.split('/'); // e.g., /profile/uuid
+                // FIX: Updated router logic to handle hash-only paths
+                const cleanHash = window.location.hash.substring(1) || '/'; // e.g., 'quiz' or 'profile/123' or '/'
+                const [path, param] = cleanHash.split('/'); // e.g., ['quiz'] or ['profile', '123'] or ['']
                 
-                const routeHandler = App.router.routes[path];
+                // Ensure root path '/' is used if path is empty string
+                const routeKey = path === '/' || path === '' ? '/' : `/${path}`; // e.g., '/' or '/quiz' or '/profile'
+                
+                const routeHandler = App.router.routes[routeKey];
                 const main = document.getElementById('app');
 
                 if (!main) return;
 
                 // Handle protected routes
                 const requiresAuth = ['/profile', '/settings', '/quiz']; // Quiz requires auth to save results
-                if (requiresAuth.includes(path) && !App.state.user) {
-                    window.location.hash = '/';
+                if (requiresAuth.includes(routeKey) && !App.state.user) {
+                    window.location.hash = ''; // FIX: Navigate to home
                     App.ui.showToast('You must be logged in to view that page.', 'info');
                     return;
                 }
 
                 // Handle results page logic
-                if (path === '/results' && !App.state.quizResults) {
-                     window.location.hash = '/quiz';
+                if (routeKey === '/results' && !App.state.quizResults) {
+                     window.location.hash = 'quiz'; // FIX: Navigate to quiz
                      App.ui.showToast('You must complete a quiz to see results.', 'info');
                      return;
                 }
@@ -112,6 +117,7 @@
                             App.quiz.renderResults();
                             break;
                         case 'profile':
+                            // Pass the 'param' (e.g., user_id) to the view
                             main.innerHTML = await App.views.ProfilePage(param);
                             break;
                         case 'settings':
@@ -121,7 +127,7 @@
                         case 'community':
                             main.innerHTML = App.views.CommunityPage();
                             break;
-                        case 'howItWorks':
+                        case 'how-it-works':
                             main.innerHTML = App.views.HowItWorksPage();
                             break;
                         default:
@@ -288,14 +294,16 @@
                 await supabase.auth.signOut();
                 App.state.quizResults = null;
                 App.state.ideology = null;
-                window.location.hash = '/';
+                window.location.hash = ''; // FIX: Navigate to home
                 App.ui.showToast('Logged out.', 'info');
             },
 
             async sendPasswordResetEmail(email, btn) {
                 App.ui.setButtonLoading(btn, true);
                 const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin, // Supabase will append the token
+                    // FIX: Use window.location.origin + window.location.pathname
+                    // This ensures it works on GitHub Pages (e.g., .../The-Spectrum/)
+                    redirectTo: window.location.origin + window.location.pathname, 
                 });
                 
                 if (error) {
@@ -477,7 +485,7 @@
                 }
 
                 // Redirect to results page
-                window.location.hash = '/results';
+                window.location.hash = 'results'; // FIX: Navigate to results
             },
 
             renderResults() {
@@ -740,7 +748,7 @@
                 `;
                 
                 document.getElementById('toast-container').appendChild(toast);
-                feather.replace();
+                feather.replace(); // This is safe now
 
                 // Animate in
                 setTimeout(() => toast.classList.add('visible'), 100);
@@ -762,7 +770,7 @@
                 if (type === 'resetPassword') content = App.components.ResetPasswordModal();
                 
                 container.innerHTML = content;
-                feather.replace();
+                feather.replace(); // This is safe now
 
                 document.getElementById('modal-backdrop').classList.remove('hidden');
                 container.classList.remove('hidden');
@@ -820,9 +828,13 @@
             },
 
             updateActiveNavLinks() {
-                const hash = window.location.hash || '#/';
+                // FIX: Logic to handle hash-only links
+                let currentHash = window.location.hash;
+                if (currentHash === '') currentHash = '#'; // Treat no hash as home hash '#'
+
                 document.querySelectorAll('.nav-link').forEach(link => {
-                    if (link.getAttribute('href') === `/${hash}`) {
+                    const linkHash = link.getAttribute('href');
+                    if (linkHash === currentHash) {
                         link.classList.add('active');
                     } else {
                         link.classList.remove('active');
@@ -851,7 +863,7 @@
                             track your views, and see where others stand.
                         </p>
                         <div class="mt-10">
-                            <a href="/#quiz" class="btn btn-lg btn-primary">
+                            <a href="#quiz" class="btn btn-lg btn-primary">
                                 Take the Quiz Now
                                 <i data-feather="arrow-right" class="ml-2 w-5 h-5"></i>
                             </a>
@@ -958,6 +970,7 @@
             
             async ProfilePage(userId) {
                 // For M1, we only show the current user's profile
+                // The `userId` param will be used in M2 for public profiles
                 const user = App.state.user;
                 if (!user) return `<h1>Profile</h1><p>You are not logged in.</p>`;
 
@@ -1177,7 +1190,7 @@
                     <div class="text-center">
                         <h1 class="text-6xl font-bold font-display text-indigo-500">404</h1>
                         <p class="text-2xl">Page Not Found</p>
-                        <a href="/#" class="btn btn-primary mt-8">Go Home</a>
+                        <a href="#" class="btn btn-primary mt-8">Go Home</a>
                     </div>
                 `;
             },
@@ -1188,7 +1201,7 @@
                         <h1 class="text-4xl font-bold font-display text-red-500">An Error Occurred</h1>
                         <p class="text-xl">Something went wrong. Please try again later.</p>
                         <code class="block bg-gray-100 dark:bg-gray-800 p-4 rounded-md my-4 text-left">${error}</code>
-                        <a href="/#" class="btn btn-primary mt-8">Go Home</a>
+                        <a href="#" class="btn btn-primary mt-8">Go Home</a>
                     </div>
                 `;
             }
@@ -1294,5 +1307,3 @@
     });
 
 })();
-
-
