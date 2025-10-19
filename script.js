@@ -13,7 +13,7 @@
 
     let supabase;
     try {
-        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
         console.error("Supabase client failed to initialize.", e);
         alert("Error: Could not connect to the backend. Please check your Supabase credentials.");
@@ -1294,3 +1294,4 @@
     });
 
 })();
+
